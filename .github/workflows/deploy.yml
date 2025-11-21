@@ -1,0 +1,48 @@
+name: Deploy to EKS using OIDC
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPO: node-eks
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+        aws-region: ap-south-1
+
+    - name: Login to ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build & Push Docker image
+      run: |
+        IMAGE_URI="${{ steps.amazon-ecr-login.outputs.registry }}/$ECR_REPO:latest"
+        docker build -t $IMAGE_URI ./app
+        docker push $IMAGE_URI
+      id: docker
+
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --name demo-eks-cluster --region ap-south-1
+
+    - name: Deploy to EKS
+      run: |
+        IMAGE_URI="${{ steps.amazon-ecr-login.outputs.registry }}/$ECR_REPO:latest"
+        sed -i "s|REPLACE_ME|$IMAGE_URI|g" k8s/deployment.yaml
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml

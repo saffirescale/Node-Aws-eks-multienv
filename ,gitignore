@@ -1,0 +1,2 @@
+# Ignore .terraform folders in any terraform directory
+**/terraform/.terraform/

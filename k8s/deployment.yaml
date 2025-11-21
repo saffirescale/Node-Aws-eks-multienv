@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-eks-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: node-eks-app
+  template:
+    metadata:
+      labels:
+        app: node-eks-app
+    spec:
+      containers:
+      - name: node-eks
+        image: REPLACE_ME
+        ports:
+        - containerPort: 3000
